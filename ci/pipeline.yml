@@ -17,6 +17,18 @@ resources:
     skip_cert_check: true
 
 jobs:
+- name: build
+  public: true
+  plan:
+  - get: movie-fun-pipeline
+  - task: package
+    file: movie-fun-pipeline/ci/tasks/package.yml
+  - put: deploy-movie-service
+    params:
+      manifest: movie-fun-pipeline/manifest.yml
+      path: package-output/movie-service.jar
+
+jobs:
 - name: test
   public: true
   plan:
