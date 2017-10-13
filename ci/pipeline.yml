@@ -1,0 +1,50 @@
+---
+resources:
+- name: movie-fun-pipeline
+  type: git
+  source:
+    uri: https://github.com/sumit-chakraborty/apps-movie-fun-code.git  #<---- REPLACE ME
+    branch: spring-boot
+
+- name: deploy-movie-service
+  type: cf
+  source:
+    api: https://api.system.cumuluslabs.io        #<---- REPLACE ME
+    username: {{cf-user}}
+    password: {{cf-password}}
+    organization: schakraborty-pal    #<---- REPLACE ME
+    space: sandbox         #<---- REPLACE ME
+    skip_cert_check: true
+
+jobs:
+- name: test
+  public: true
+  plan:
+  - get: movie-fun-pipeline
+    trigger: true
+  - task: test
+    file: movie-fun-pipeline/ci/tasks/test.yml
+
+- name: deploy
+  public: true
+  plan:
+  - get: movie-fun-pipeline
+    trigger: true
+    passed: [test]
+  - task: package
+    file: movie-fun-pipeline/ci/tasks/package.yml
+  - put: deploy-movie-service
+    params:
+      manifest: movie-fun-pipeline/manifest.yml
+      path: package-output/movie-service.jar
+
+- name: smoke_test
+  public: true
+  plan:
+  - get: movie-fun-pipeline
+    trigger: true
+    passed: [deploy]
+  - task: smoke_test
+    file: movie-fun-pipeline/ci/tasks/smoke-test.yml
+    params:
+      MOVIE_SERVICE_URL: https://movie-service-sumit.apps.cumuluslabs.io  #<---- REPLACE ME
